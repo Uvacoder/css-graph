@@ -1,10 +1,12 @@
 /**
- * For values from 0-2, returns a value from roughly 0 to 1.
- * @param {number} t
- * @returns {number}
+ * Shuffles an array in-place (does not copy) using Fisher-Yates.
+ * @param {array} array
  */
-const weightedSigmoid = t => {
-  return 1 / (1 + Math.exp(-8 * (t -0.5)));
+const shuffle = array => {
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
 };
 
 /**
@@ -137,40 +139,25 @@ class Graph {
    * @param {number} p
    */
   connect(p = 0.5) {
-    this.nodes.forEach((val, keyFrom) => {
-      this.nodes.forEach((val, keyTo) => {
-        if (keyFrom !== keyTo && Math.random() < p) {
-          this.addEdge(keyFrom, keyTo);
-        }
+    const queue = Array.from(this.nodes.keys());
+    const visited = [];
+    shuffle(queue);
+    // pick a random number of ranks from between 2 and queue.length
+    const ranks = Math.floor(2 + Math.random() * (queue.length - 1));
+    const nodesPerRank = Math.ceil(queue.length / ranks);
+    while (queue.length) {
+      // We want the average nodes in a rank to approach nodesPerRank, so pick between 0 and 2n.
+      const nRank = Math.ceil(Math.random() * 2 * nodesPerRank);
+      const thisRank = queue.splice(0, nRank);
+      thisRank.map(nodeFrom => {
+        visited.map(nodeTo => {
+          if (Math.random() < p) {
+            this.addEdge(nodeFrom, nodeTo);
+          }
+        });
+        visited.push(nodeFrom);
       });
-    });
-  }
-
-  /**
-   * Breaks cycles in a connected graph using recursiveBreak()
-   */
-  breakCycles() {
-    this.nodes.forEach((val, node) => {
-      let visited = [];
-      this.recursiveBreak(node, visited);
-    });
-  }
-
-  /**
-   * Depth-first search, breaks cycles when it finds them
-   * TODO: this is resulting in consistently boring graphs
-   * @param {string} node node id
-   * @param {array} visited array of visited nodes
-   */
-  recursiveBreak(node, visited) {
-    this.edges.get(node).forEach((weight, neighbor) => {
-      if (visited.includes(neighbor)) {
-        this.removeEdge(node, neighbor);
-      } else {
-        visited.push(node);
-        this.recursiveBreak(neighbor, visited);
-      }
-    });
+    }
   }
 
   /**
@@ -214,6 +201,7 @@ class Graph {
         this.nodes.set(node, Math.random());
       }
     });
+    this.updateValues();
   }
 
   updateValues() {
@@ -241,13 +229,7 @@ demo.addNode();
 demo.addNode();
 demo.addNode();
 
-
-
-
-demo.connect(0.2);
-demo.breakCycles();
-demo.initRandomValues();
-demo.updateValues();
-
+demo.connect(0.25);
 demo.draw();
-console.log(demo.nodes)
+demo.initRandomValues();
+console.log(demo.nodes);
